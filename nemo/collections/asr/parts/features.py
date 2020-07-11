@@ -127,6 +127,7 @@ class FilterbankFeatures(nn.Module):
         stft_conv=False,
         pad_value=0,
         mag_power=2.0,
+        highfreq_mask_prob=0,
     ):
         super(FilterbankFeatures, self).__init__()
         if (
@@ -189,6 +190,7 @@ class FilterbankFeatures(nn.Module):
         self.nfilt = nfilt
         self.preemph = preemph
         self.pad_to = pad_to
+        self.highfreq_mask_prob = highfreq_mask_prob
         highfreq = highfreq or sample_rate / 2
 
         filterbanks = torch.tensor(
@@ -256,6 +258,10 @@ class FilterbankFeatures(nn.Module):
             x = x.pow(self.mag_power)
         if not self.stft_conv:
             x = x.sum(-1)
+
+        rand = torch.rand(1)
+        if rand < self.highfreq_mask_prob:
+            x[:, x.shape[1] // 2:, :] = 0
 
         # dot with filterbank energies
         x = torch.matmul(self.fb.to(x.dtype), x)
